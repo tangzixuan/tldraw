@@ -44,6 +44,7 @@ const env = makeEnv([
 	'CLOUDFLARE_ACCOUNT_ID',
 	'CLOUDFLARE_API_TOKEN',
 	'DISCORD_DEPLOY_WEBHOOK_URL',
+	'DISCORD_FEEDBACK_WEBHOOK_URL',
 	'DISCORD_HEALTH_WEBHOOK_URL',
 	'GC_MAPS_API_KEY',
 	'GH_TOKEN',
@@ -239,6 +240,8 @@ async function deployTlsyncWorker({ dryRun }: { dryRun: boolean }) {
 			CLERK_PUBLISHABLE_KEY: env.VITE_CLERK_PUBLISHABLE_KEY,
 			BOTCOM_POSTGRES_CONNECTION_STRING,
 			BOTCOM_POSTGRES_POOLED_CONNECTION_STRING,
+			MULTIPLAYER_SERVER: env.MULTIPLAYER_SERVER,
+			DISCORD_FEEDBACK_WEBHOOK_URL: env.DISCORD_FEEDBACK_WEBHOOK_URL,
 		},
 		sentry: {
 			project: 'tldraw-sync',
@@ -251,6 +254,9 @@ async function deployTlsyncWorker({ dryRun }: { dryRun: boolean }) {
 let didUpdateImageResizeWorker = false
 async function deployImageResizeWorker({ dryRun }: { dryRun: boolean }) {
 	const workerId = `${previewId ?? env.TLDRAW_ENV}-tldraw-image-optimizer`
+	const multiplayerServer = previewId
+		? `${previewId}-preview-deploy.tldraw.com`
+		: env.MULTIPLAYER_SERVER
 	if (previewId && !didUpdateImageResizeWorker) {
 		await setWranglerPreviewConfig(imageResize, {
 			name: workerId,
@@ -270,7 +276,7 @@ async function deployImageResizeWorker({ dryRun }: { dryRun: boolean }) {
 		vars: {
 			TLDRAW_ENV: env.TLDRAW_ENV,
 			WORKER_NAME: workerId,
-			MULTIPLAYER_SERVER: env.MULTIPLAYER_SERVER,
+			MULTIPLAYER_SERVER: multiplayerServer,
 		},
 	})
 }

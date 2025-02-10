@@ -1,4 +1,3 @@
-import { TlaFileOpenState } from '@tldraw/dotcom-shared'
 import { useSync } from '@tldraw/sync'
 import { useCallback, useEffect, useMemo } from 'react'
 import {
@@ -7,7 +6,6 @@ import {
 	TLSessionStateSnapshot,
 	TLUiDialogsContextType,
 	Tldraw,
-	assert,
 	createSessionStateSnapshotSignal,
 	react,
 	throttle,
@@ -31,7 +29,6 @@ import { maybeSlurp } from '../../utils/slurping'
 import { SneakyDarkModeSync } from './SneakyDarkModeSync'
 import { TlaEditorWrapper } from './TlaEditorWrapper'
 import { TlaEditorErrorFallback } from './editor-components/TlaEditorErrorFallback'
-import { TlaEditorKeyboardShortcutsDialog } from './editor-components/TlaEditorKeyboardShortcutsDialog'
 import { TlaEditorMenuPanel } from './editor-components/TlaEditorMenuPanel'
 import { TlaEditorSharePanel } from './editor-components/TlaEditorSharePanel'
 import { TlaEditorTopPanel } from './editor-components/TlaEditorTopPanel'
@@ -42,22 +39,19 @@ import { useFileEditorOverrides } from './useFileEditorOverrides'
 /** @internal */
 export const components: TLComponents = {
 	ErrorFallback: TlaEditorErrorFallback,
-	KeyboardShortcutsDialog: TlaEditorKeyboardShortcutsDialog,
 	MenuPanel: TlaEditorMenuPanel,
 	TopPanel: TlaEditorTopPanel,
 	SharePanel: TlaEditorSharePanel,
+	Dialogs: null,
+	Toasts: null,
 }
 
 interface TlaEditorProps {
 	fileSlug: string
-	fileOpenState?: TlaFileOpenState
 	deepLinks?: boolean
 }
 
 export function TlaEditor(props: TlaEditorProps) {
-	if (props.fileOpenState?.mode === 'duplicate') {
-		assert(props.fileOpenState.duplicateId, 'duplicateId is required when mode is duplicate')
-	}
 	// force re-mount when the file slug changes to prevent state from leaking between files
 	return (
 		<>
@@ -69,10 +63,9 @@ export function TlaEditor(props: TlaEditorProps) {
 	)
 }
 
-function TlaEditorInner({ fileSlug, fileOpenState, deepLinks }: TlaEditorProps) {
+function TlaEditorInner({ fileSlug, deepLinks }: TlaEditorProps) {
 	const handleUiEvent = useHandleUiEvents()
 	const app = useMaybeApp()
-	const mode = fileOpenState?.mode
 
 	const fileId = fileSlug
 
@@ -122,7 +115,7 @@ function TlaEditorInner({ fileSlug, fileOpenState, deepLinks }: TlaEditorProps) 
 			const sessionState$ = createSessionStateSnapshotSignal(editor.store)
 			const updateSessionState = throttle((state: TLSessionStateSnapshot) => {
 				app.onFileSessionStateUpdate(fileId, state)
-			}, 1000)
+			}, 5000)
 			// don't want to update if they only open the file and didn't look around
 			let firstTime = true
 			const cleanup = react('update session state', () => {
@@ -145,18 +138,13 @@ function TlaEditorInner({ fileSlug, fileOpenState, deepLinks }: TlaEditorProps) 
 				remountImageShapes,
 			}).then(setIsReady)
 
-			if (mode === 'slurp-legacy-file') {
-				assert(fileOpenState?.snapshot, 'snapshot is required when mode is slurp-legacy-file')
-				editor.loadSnapshot(fileOpenState.snapshot)
-			}
-
 			return () => {
+				updateSessionState.flush()
 				abortController.abort()
 				cleanup()
-				updateSessionState.cancel()
 			}
 		},
-		[addDialog, app, fileId, fileOpenState, mode, remountImageShapes, setIsReady]
+		[addDialog, app, fileId, remountImageShapes, setIsReady]
 	)
 
 	const user = useTldrawUser()
@@ -170,16 +158,8 @@ function TlaEditorInner({ fileSlug, fileOpenState, deepLinks }: TlaEditorProps) 
 			if (user) {
 				url.searchParams.set('accessToken', await user.getToken())
 			}
-			if (mode) {
-				url.searchParams.set('mode', mode)
-				if (mode === 'duplicate') {
-					const duplicateId = fileOpenState.duplicateId
-					assert(duplicateId, 'duplicateId is required when mode is duplicate')
-					url.searchParams.set('duplicateId', duplicateId)
-				}
-			}
 			return url.toString()
-		}, [fileSlug, user, mode, fileOpenState]),
+		}, [fileSlug, user]),
 		assets,
 		userInfo: app?.tlUser.userPreferences,
 	})
@@ -253,14 +233,14 @@ function SneakyFileUpdateHandler({ fileId }: { fileId: string }) {
 				app.onFileEdit(fileId)
 			},
 			// This is used to update the lastEditAt time in the database, and to let the local
-			// room know that an edit ahs been made.
+			// room know that an edit has been made.
 			// It doesn't need to be super fast or accurate so we can throttle it a lot
-			5000
+			10_000
 		)
 		const unsub = editor.store.listen(onChange, { scope: 'document', source: 'user' })
 		return () => {
+			onChange.flush()
 			unsub()
-			onChange.cancel()
 		}
 	}, [app, fileId, editor])
 
