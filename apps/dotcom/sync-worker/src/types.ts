@@ -38,6 +38,7 @@ export interface Environment {
 	SNAPSHOT_SLUG_TO_PARENT_SLUG: KVNamespace
 
 	UPLOADS: R2Bucket
+	USER_DO_SNAPSHOTS: R2Bucket
 
 	SLUG_TO_READONLY_SLUG: KVNamespace
 	READONLY_SLUG_TO_SLUG: KVNamespace
@@ -66,6 +67,11 @@ export interface Environment {
 
 export function isDebugLogging(env: Environment) {
 	return env.TLDRAW_ENV === 'development' || env.TLDRAW_ENV === 'preview'
+}
+
+export function getUserDoSnapshotKey(env: Environment, userId: string) {
+	const snapshotPrefix = env.TLDRAW_ENV === 'preview' ? env.WORKER_NAME + '/' : ''
+	return `${snapshotPrefix}${userId}`
 }
 
 export type DBLoadResult =
@@ -130,6 +136,7 @@ export type TLUserDurableObjectEvent =
 	| {
 			type:
 				| 'reboot'
+				| 'full_data_fetch'
 				| 'reboot_error'
 				| 'rate_limited'
 				| 'broadcast_message'

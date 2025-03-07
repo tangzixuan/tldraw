@@ -17,7 +17,7 @@ import {
 	compact,
 	createShapeId,
 	openWindow,
-	useEditor,
+	useMaybeEditor,
 } from '@tldraw/editor'
 import * as React from 'react'
 import { kickoutOccludedShapes } from '../../tools/SelectTool/selectHelpers'
@@ -76,7 +76,7 @@ function getExportName(editor: Editor, defaultName: string) {
 
 /** @internal */
 export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
-	const editor = useEditor()
+	const _editor = useMaybeEditor()
 	const showCollaborationUi = useShowCollaborationUi()
 	const helpers = useDefaultHelpers()
 	const trackEvent = useUiEvents()
@@ -85,6 +85,8 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 	// should this be a useMemo? looks like it doesn't actually deref any reactive values
 	const actions = React.useMemo<TLUiActionsContextType>(() => {
+		const editor = _editor as Editor
+		if (!editor) return {}
 		function mustGoBackToSelectToolFirst() {
 			if (!editor.isIn('select')) {
 				editor.complete()
@@ -261,29 +263,31 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('toggle-auto-size', { source })
 					editor.markHistoryStoppingPoint('toggling auto size')
-					const shapes = editor
-						.getSelectedShapes()
-						.filter(
-							(shape): shape is TLTextShape =>
-								editor.isShapeOfType<TLTextShape>(shape, 'text') && shape.props.autoSize === false
+					editor.run(() => {
+						const shapes = editor
+							.getSelectedShapes()
+							.filter(
+								(shape): shape is TLTextShape =>
+									editor.isShapeOfType<TLTextShape>(shape, 'text') && shape.props.autoSize === false
+							)
+						editor.updateShapes(
+							shapes.map((shape) => {
+								return {
+									id: shape.id,
+									type: shape.type,
+									props: {
+										...shape.props,
+										w: 8,
+										autoSize: true,
+									},
+								}
+							})
 						)
-					editor.updateShapes(
-						shapes.map((shape) => {
-							return {
-								id: shape.id,
-								type: shape.type,
-								props: {
-									...shape.props,
-									w: 8,
-									autoSize: true,
-								},
-							}
-						})
-					)
-					kickoutOccludedShapes(
-						editor,
-						shapes.map((shape) => shape.id)
-					)
+						kickoutOccludedShapes(
+							editor,
+							shapes.map((shape) => shape.id)
+						)
+					})
 				},
 			},
 			{
@@ -548,9 +552,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('align-shapes', { operation: 'left', source })
 					editor.markHistoryStoppingPoint('align left')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.alignShapes(selectedShapeIds, 'left')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.alignShapes(selectedShapeIds, 'left')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -567,9 +573,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('align-shapes', { operation: 'center-horizontal', source })
 					editor.markHistoryStoppingPoint('align center horizontal')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.alignShapes(selectedShapeIds, 'center-horizontal')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.alignShapes(selectedShapeIds, 'center-horizontal')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -583,9 +591,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('align-shapes', { operation: 'right', source })
 					editor.markHistoryStoppingPoint('align right')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.alignShapes(selectedShapeIds, 'right')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.alignShapes(selectedShapeIds, 'right')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -602,9 +612,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('align-shapes', { operation: 'center-vertical', source })
 					editor.markHistoryStoppingPoint('align center vertical')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.alignShapes(selectedShapeIds, 'center-vertical')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.alignShapes(selectedShapeIds, 'center-vertical')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -618,9 +630,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('align-shapes', { operation: 'top', source })
 					editor.markHistoryStoppingPoint('align top')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.alignShapes(selectedShapeIds, 'top')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.alignShapes(selectedShapeIds, 'top')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -634,9 +648,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('align-shapes', { operation: 'bottom', source })
 					editor.markHistoryStoppingPoint('align bottom')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.alignShapes(selectedShapeIds, 'bottom')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.alignShapes(selectedShapeIds, 'bottom')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -653,9 +669,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('distribute-shapes', { operation: 'horizontal', source })
 					editor.markHistoryStoppingPoint('distribute horizontal')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.distributeShapes(selectedShapeIds, 'horizontal')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.distributeShapes(selectedShapeIds, 'horizontal')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -672,9 +690,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('distribute-shapes', { operation: 'vertical', source })
 					editor.markHistoryStoppingPoint('distribute vertical')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.distributeShapes(selectedShapeIds, 'vertical')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.distributeShapes(selectedShapeIds, 'vertical')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -690,9 +710,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('stretch-shapes', { operation: 'horizontal', source })
 					editor.markHistoryStoppingPoint('stretch horizontal')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.stretchShapes(selectedShapeIds, 'horizontal')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.stretchShapes(selectedShapeIds, 'horizontal')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -708,9 +730,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('stretch-shapes', { operation: 'vertical', source })
 					editor.markHistoryStoppingPoint('stretch vertical')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.stretchShapes(selectedShapeIds, 'vertical')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.stretchShapes(selectedShapeIds, 'vertical')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -726,9 +750,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('flip-shapes', { operation: 'horizontal', source })
 					editor.markHistoryStoppingPoint('flip horizontal')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.flipShapes(selectedShapeIds, 'horizontal')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.flipShapes(selectedShapeIds, 'horizontal')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -741,9 +767,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('flip-shapes', { operation: 'vertical', source })
 					editor.markHistoryStoppingPoint('flip vertical')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.flipShapes(selectedShapeIds, 'vertical')
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.flipShapes(selectedShapeIds, 'vertical')
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -756,9 +784,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('pack-shapes', { source })
 					editor.markHistoryStoppingPoint('pack')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.packShapes(selectedShapeIds, editor.options.adjacentShapeMargin)
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.packShapes(selectedShapeIds, editor.options.adjacentShapeMargin)
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -774,9 +804,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('stack-shapes', { operation: 'vertical', source })
 					editor.markHistoryStoppingPoint('stack-vertical')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.stackShapes(selectedShapeIds, 'vertical', 16)
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.stackShapes(selectedShapeIds, 'vertical', 16)
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -792,9 +824,11 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('stack-shapes', { operation: 'horizontal', source })
 					editor.markHistoryStoppingPoint('stack-horizontal')
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.stackShapes(selectedShapeIds, 'horizontal', 16)
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.stackShapes(selectedShapeIds, 'horizontal', 16)
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -953,11 +987,13 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('rotate-cw', { source })
 					editor.markHistoryStoppingPoint('rotate-cw')
-					const offset = editor.getSelectionRotation() % (HALF_PI / 2)
-					const dontUseOffset = approximately(offset, 0) || approximately(offset, HALF_PI / 2)
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.rotateShapesBy(selectedShapeIds, HALF_PI / 2 - (dontUseOffset ? 0 : offset))
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const offset = editor.getSelectionRotation() % (HALF_PI / 2)
+						const dontUseOffset = approximately(offset, 0) || approximately(offset, HALF_PI / 2)
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.rotateShapesBy(selectedShapeIds, HALF_PI / 2 - (dontUseOffset ? 0 : offset))
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -970,11 +1006,13 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 
 					trackEvent('rotate-ccw', { source })
 					editor.markHistoryStoppingPoint('rotate-ccw')
-					const offset = editor.getSelectionRotation() % (HALF_PI / 2)
-					const offsetCloseToZero = approximately(offset, 0)
-					const selectedShapeIds = editor.getSelectedShapeIds()
-					editor.rotateShapesBy(selectedShapeIds, offsetCloseToZero ? -(HALF_PI / 2) : -offset)
-					kickoutOccludedShapes(editor, selectedShapeIds)
+					editor.run(() => {
+						const offset = editor.getSelectionRotation() % (HALF_PI / 2)
+						const offsetCloseToZero = approximately(offset, 0)
+						const selectedShapeIds = editor.getSelectedShapeIds()
+						editor.rotateShapesBy(selectedShapeIds, offsetCloseToZero ? -(HALF_PI / 2) : -offset)
+						kickoutOccludedShapes(editor, selectedShapeIds)
+					})
 				},
 			},
 			{
@@ -1403,7 +1441,7 @@ export function ActionsProvider({ overrides, children }: ActionsProviderProps) {
 		}
 
 		return actions
-	}, [helpers, editor, trackEvent, overrides, defaultDocumentName, showCollaborationUi])
+	}, [helpers, _editor, trackEvent, overrides, defaultDocumentName, showCollaborationUi])
 
 	return <ActionsContext.Provider value={asActions(actions)}>{children}</ActionsContext.Provider>
 }
